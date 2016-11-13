@@ -60,8 +60,7 @@ bismillah <- function(waktu,nama_var,nama_output){
 	# ------------------- GLOBAL ATRIBUT ---------------- #
 	ncatt_put(con,0,"Conventions","COARDS")
 	ncatt_put(con,0,"calendar","standard")
-	ncatt_put(con,0,"comments",
-			  "file created by grads using lats4d available from http://dao.gsfc.nasa.gov/software/grads/lats4d/")
+	ncatt_put(con,0,"comments","Replikasi Atribut NC GTG/whitehall,2014")
 	ncatt_put(con,0,"model","geos/das")
 	ncatt_put(con,0,"center","gsfc")
 	# --------------- GABUNG DIMENSI-VARIABEL-ATRIBUT ------------- #
