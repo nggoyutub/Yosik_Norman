@@ -1,0 +1,79 @@
+library(ncdf)
+library(ncdf4)
+
+# <<<<<<<<<<<<<<<< PENAMAAN DATA DENGAN WAKTU >>>>>>>>>>>>>>>>>  #
+# ----------- INPUT WAKTU AWAL --------- #
+tahun_awal <- '2013' #YYYY
+bulan_awal <- '01' #MM
+tanggal_awal <- '02' #DD 
+jam_awal <- '00:00:00' #HH  
+
+# ----------------- INPUT WAKTU AKHIR --------------- #
+tahun_akhir <- '2013' #YYYY
+bulan_akhir <- '12' #MM
+tanggal_akhir <- '31' #DD 
+jam_akhir <-'21:00:00' #HH  
+waktu_awal <- sprintf('%s-%s-%s %s',tahun_awal,bulan_awal,tanggal_awal,jam_awal)
+waktu_akhir <- sprintf('%s-%s-%s %s',tahun_akhir,bulan_akhir,tanggal_akhir,jam_akhir)
+nama_waktu <- seq(as.POSIXct(waktu_awal), as.POSIXct(waktu_akhir), "hour")
+seq_nama_waktu <- seq(1,length(nama_waktu),3)
+nama_waktu <- nama_waktu[seq_nama_waktu]
+nama_waktu_tahun <- substr(nama_waktu,1,4)
+nama_waktu_bulan <- substr(nama_waktu,6,7)
+nama_waktu_tanggal <- substr(nama_waktu,9,10)
+nama_waktu_jam <- substr(nama_waktu,12,13)
+nama_waktu_akhir <- sprintf('3B42.%s%s%s.%s.7A.nc',nama_waktu_tahun,
+                            nama_waktu_bulan,nama_waktu_tanggal,nama_waktu_jam)  
+YYYY <- substr(nama_waktu,1,10)
+HH <-as.numeric(substr(nama_waktu,12,13))
+waktu_buat_nc <- sprintf("hours since %s %d",YYYY,HH)  # >> "hours since YYYY-MMM-DD HH"
+
+# <<<<<<<<<<<<<<<< PERSIAPAN DATA (X,Y,T) >>>>>>>>>>>>>>>> #
+
+trmm <- open.ncdf('../Hasil_NC_input_python/data.nc')
+lon <- get.var.ncdf(trmm,'X')
+lat <- get.var.ncdf(trmm,'Y')
+data_pcp <- get.var.ncdf(trmm,'precipitation')
+dim(data_pcp)
+data_pcp <- data_pcp[,,8:(7+length(nama_waktu_akhir))] 
+data_pcp <- aperm(data_pcp,c(2,1,3)) ### transpose matrix
+
+# <<<<<<<<<<<<<<< FUNGSI MEMBUAT NETCDF4 FILE-PER-JAM >>>>>>>>>>>>>>>>>>> #
+
+bismillah <- function(waktu,nama_var,nama_output){
+	dimtime <- ncdim_def('time', units=waktu, vals=1)
+	dimlon <- ncdim_def(name='longitude', units='degrees_east', 
+						longname='Longitude', vals=lon )
+	dimlat <- ncdim_def(name='latitude', units='degrees_north', 
+						longname='Latitude', vals=lat )
+	varpcp <- ncvar_def(name='pcp', units='', dim=list(dimlon,dimlat, dimtime),
+						longname='precipitation (mm/hr)',prec = 'float')
+	outputfile <- sprintf('../output_trmmnc4/%s',nama_output);
+	con <- nc_create(outputfile, varpcp)
+	ncatt_put(con, varpcp, 'comments', 'Unknown1 variable comment')
+	ncatt_put(con, varpcp, 'units', '')
+	ncatt_put(con, varpcp, 'grid_name', 'grid-1')
+	ncatt_put(con, varpcp, 'grid_type', 'linear')
+	ncatt_put(con, varpcp, 'level_description', 'Earth surface')
+	ncatt_put(con, varpcp, 'time_statistic', 'instantaneous')
+	ncatt_put(con, varpcp, 'missing_value', -9999.900390625)
+	# ------------------- GLOBAL ATRIBUT ---------------- #
+	ncatt_put(con,0,"Conventions","COARDS")
+	ncatt_put(con,0,"calendar","standard")
+	ncatt_put(con,0,"comments",
+			  "file created by grads using lats4d available from http://dao.gsfc.nasa.gov/software/grads/lats4d/")
+	ncatt_put(con,0,"model","geos/das")
+	ncatt_put(con,0,"center","gsfc")
+	# --------------- GABUNG DIMENSI-VARIABEL-ATRIBUT ------------- #
+	ncvar_put(con, varpcp, nama_var)
+	nc_close(con)
+}
+
+# <<<<<<<<<<<<<<<<<<< ITERASI AKHIR >>>>>>>>>>>>>>>>>>>> #
+# <<<<<<<<<<<<<<<<<<<<< EKSEKUSI >>>>>>>>>>>>>>>>>>>>>>> #
+
+for(i in 1:length(nama_waktu_akhir)){
+	bismillah(waktu_buat_nc[i],data_pcp[,,i],nama_waktu_akhir[i])
+}
+
+# <<<<<<<<<<<<<<<<<<< ALHAMDULILLAH >>>>>>>>>>>>>>>>>>>> #
